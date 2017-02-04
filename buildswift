@@ -1,0 +1,136 @@
+BRANCH="swift-3.1-branch"
+SUDO="sudo" 
+SW_BUILD_DIR=~/swift-source
+
+
+
+if [ "/root" == $HOME ]; then 
+   SUDO=""
+fi
+
+$sudo dnf update -y
+$SUDO dnf groupinstall -y --best --allowerasing "C Development Tools and Libraries" 
+$SUDO dnf install -y --best --allowerasing git \
+    git-core \
+    cmake \
+    ninja-build \
+    binutils \
+    libtool \
+    clang \
+    re2c \
+    uuid-devel \
+    libuuid-devel \
+    icu \
+    libicu \
+    libicu-devel \
+    libbsd-devel \
+    libedit-devel \
+    libxml2-devel \
+    libsqlite3x-devel \
+    curl \
+    curl-devel \
+    file \
+    swig \
+    python-libs \
+    ncurses-devel \
+    python-devel \
+    python-pkgconfig
+
+# Map some utils 
+
+  if [ ! -f /usr/bin/gold ] ; then
+         if [ -f /usr/bin/ld.gold ] ; then
+            $SUDO ln -s /usr/bin/ld.gold /usr/bin/gold
+         fi
+    fi
+
+ if [ ! -f /usr/bin/ninja ] ; then
+         if [ -f /usr/bin/ninja-build ] ; then
+            $SUDO ln -s /usr/bin/ninja-build /usr/bin/ninja
+         fi
+    fi
+
+
+
+mkdir -p $SW_BUILD_DIR/install
+pushd $SW_BUILD_DIR
+ if [ -d $SW_BUILD_DIR/swift ] ; then
+            pushd $SW_BUILD_DIR/swift 
+	       git pull
+	       git checkout -f $BRANCH
+	    popd
+         else
+	    git clone http://github.com/apple/swift.git
+	    pushd $SW_BUILD_DIR/swift
+               git checkout -f $BRANCH
+            popd
+         fi
+
+if [ "" == $BRANCH ] ; then 
+   swift/utils/update-checkout --clone --reset-to-remote
+else
+   swift/utils/update-checkout --scheme $BRANCH --clone --reset-to-remote
+fi
+git clone https://github.com/ninja-build/ninja.git
+pushd ninja
+git checkout -f release
+popd
+
+sed -i '/#include <Block.h>/d' swift-corelibs-foundation/CoreFoundation/Base.subproj/CFBase.h
+sed -i 's/#include <Block.h>/#include <closure\/Block.h>/g' swift-corelibs-foundation/CoreFoundation/Collections.subproj/CFBasicHash.c
+sed -i 's/#include <Block.h>/#include <closure\/Block.h>/g' swift-corelibs-foundation/CoreFoundation/RunLoop.subproj/CFRunLoop.c
+
+cat > ./mypreset.ini <<ZZZZ 
+[preset: my_buildbot_linux]
+mixin-preset=mixin_linux_installation
+build-subdir=buildbot_linux
+lldb
+release
+test
+validation-test
+long-test
+foundation
+libdispatch
+lit-args=-v
+
+dash-dash
+
+install-foundation
+install-libdispatch
+reconfigure
+
+[preset: my_notest_buildbot_linux]
+mixin-preset=mixin_lightweight_assertions
+build-subdir=buildbot_linux
+lldb
+release
+lit-args=-v
+
+dash-dash
+
+reconfigure
+ZZZZ
+
+cat swift/utils/build-presets.ini ./mypreset.ini > ./workpreset.ini
+
+#Build the swift system
+
+swift/utils/build-script --jobs 4 \
+ --preset-file=./workpreset.ini \
+ --preset=my_notest_buildbot_linux \
+                install_destdir=$SW_BUILD_DIR/install \
+                installable_package=$SW_BUILD_DIR/swift.tar.gz
+
+
+#Make lldb /lib and /lib64 the same to fool the tests. 
+
+$SUDO cp -r build/buildbot_linux/lldb-linux-x86_64/lib64/* build/buildbot_linux/lldb-linux-x86_64/lib
+$SUDO cp -r build/buildbot_linux/lldb-linux-x86_64/lib/* build/buildbot_linux/lldb-linux-x86_64/lib64
+
+#Run the build a second time to run all the tests
+
+swift/utils/build-script --jobs 4 \
+        --preset-file=./workpreset.ini \
+	--preset=buildbot_linux \
+		install_destdir=$SW_BUILD_DIR/install \
+		installable_package=$SW_BUILD_DIR/swift.tar.gz 
