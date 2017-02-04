@@ -1,7 +1,7 @@
 BRANCH="swift-3.1-branch"
 SUDO="sudo" 
 SW_BUILD_DIR=~/swift-source
-
+FEDORA_VERSION=25
 
 
 if [ "/root" == $HOME ]; then 
@@ -83,7 +83,7 @@ sed -i 's/#include <Block.h>/#include <closure\/Block.h>/g' swift-corelibs-found
 cat > ./mypreset.ini <<ZZZZ 
 [preset: my_buildbot_linux]
 mixin-preset=mixin_linux_installation
-build-subdir=buildbot_linux
+build-subdir=buildbot_linux_fc$FEDORA_VERSION
 lldb
 release
 test
@@ -94,6 +94,9 @@ libdispatch
 lit-args=-v
 
 dash-dash
+skip-test-lldb
+skip-test-linux
+skip-test-swiftpm  
 
 install-foundation
 install-libdispatch
@@ -101,13 +104,31 @@ reconfigure
 
 [preset: my_notest_buildbot_linux]
 mixin-preset=mixin_lightweight_assertions
-build-subdir=buildbot_linux
+build-subdir=buildbot_linux_fc$FEDORA_VERSION
 lldb
 release
+foundation
+libdispatch
 lit-args=-v
 
 dash-dash
+build-ninja
+install-swift
+install-lldb
+install-llbuild
+install-swiftpm
+install-xctest
+install-prefix=/usr
+swift-install-components=autolink-driver;compiler;clang-builtin-headers;stdlib;swift-remote-mirror;sdk-overlay;license
+build-swift-static-stdlib
+build-swift-static-sdk-overlay
+build-swift-stdlib-unittest-extra
 
+# Executes the lit tests for the installable package that is created
+# Assumes the swift-integration-tests repo is checked out
+
+install-destdir=%(install_destdir)s
+installable-package=%(installable_package)s
 reconfigure
 ZZZZ
 
@@ -119,18 +140,45 @@ swift/utils/build-script --jobs 4 \
  --preset-file=./workpreset.ini \
  --preset=my_notest_buildbot_linux \
                 install_destdir=$SW_BUILD_DIR/install \
-                installable_package=$SW_BUILD_DIR/swift.tar.gz
+                installable_package=$SW_BUILD_DIR/$BRANCH.fc$FEDORA_VERSION.tar.gz
 
 
 #Make lldb /lib and /lib64 the same to fool the tests. 
 
-$SUDO cp -r build/buildbot_linux/lldb-linux-x86_64/lib64/* build/buildbot_linux/lldb-linux-x86_64/lib
-$SUDO cp -r build/buildbot_linux/lldb-linux-x86_64/lib/* build/buildbot_linux/lldb-linux-x86_64/lib64
+$SUDO cp -r build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/* build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib
+$SUDO cp -r build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib/* build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64
+
+if [ ! -f build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib/liblldb.so.3 ] ; then
+         if [ -f  build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib/liblldb.so.4.0.0 ] ; then
+		$SUDO unlink build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib/liblldb.so.3
+		$SUDO cp build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib/liblldb.so.4.0.0 build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib/liblldb.so.3
+         fi
+    fi
+
+if [ ! -f build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/liblldb.so.3 ] ; then
+         if [ -f  build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/liblldb.so.4.0.0 ] ; then
+                $SUDO unlink build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/liblldb.so.3
+                $SUDO cp build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/liblldb.so.4.0.0 build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/liblldb.so.3
+         fi
+    fi
+
 
 #Run the build a second time to run all the tests
 
 swift/utils/build-script --jobs 4 \
         --preset-file=./workpreset.ini \
-	--preset=buildbot_linux \
+	--preset=my_buildbot_linux \
 		install_destdir=$SW_BUILD_DIR/install \
-		installable_package=$SW_BUILD_DIR/swift.tar.gz 
+		installable_package=$SW_BUILD_DIR/$BRANCH.fc$FEDORA_VERSION.tar.gz 
+
+if [ ! -f install/usr/lib/liblldb.so.3 ] ; then
+         if [ -f  install/usr/lib/liblldb.so.4.0.0 ] ; then
+                $SUDO unlink install/usr/lib/liblldb.so.3
+                $SUDO cp install/usr/lib/liblldb.so.4.0.0 install/usr/lib/liblldb.so.3
+         fi
+    fi
+
+pushd $SW_BUILD_DIR/install
+	tar -cvzf $SW_BUILD_DIR/$BRANCH.fc$FEDORA_VERSION.tar.gz .
+popd
+
