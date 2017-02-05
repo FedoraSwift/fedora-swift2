@@ -6,10 +6,12 @@ they form a containerized build environment for swift on fedora.
 
 The use of containers means that the buld environment is the same on everybodies 
 system, regardless of the particular setup they are running, the arrangement even 
-allows running of the scripts on other operating system to build an fc25 swift distribution.
+allows running of the scripts on other operating systems to build an fc25 swift distribution. This elminates a whole class of bug resulting from different build enviroments. 
 
 For example it would be quite feasible to use the system to build for fc25 on Mac OSX or Ubuntu.
-Basically any environment that can run docker and confirms to basic posix functionality. 
+Basically any environment that can run docker and conforms to basic posix functionality. 
+
+I am hoping to encourage the swift devs to support fc25+ by providing a simple build environment they can run on thier macOSx or ubuntu systems. I would encourage you to request that they do at every opportunity. 
 
 ### Check your docker install
 You can test your docker install by running the following command.
