@@ -2,7 +2,7 @@ BRANCH="swift-3.1-branch"
 SUDO="sudo" 
 SW_BUILD_DIR=~/swift-source
 FEDORA_VERSION=25
-
+TIMESTAMP=`date +"%m-%d-%y.%H-%m"`
 
 if [ "/root" == $HOME ]; then 
    SUDO=""
@@ -140,7 +140,7 @@ swift/utils/build-script --jobs 4 \
  --preset-file=./workpreset.ini \
  --preset=my_notest_buildbot_linux \
                 install_destdir=$SW_BUILD_DIR/install \
-                installable_package=$SW_BUILD_DIR/$BRANCH.fc$FEDORA_VERSION.tar.gz
+                installable_package=$SW_BUILD_DIR/$BRANCH.$TIMESTAMP.fc$FEDORA_VERSION.tar.gz
 
 
 #Make lldb /lib and /lib64 the same to fool the tests. 
@@ -169,7 +169,7 @@ swift/utils/build-script --jobs 4 \
         --preset-file=./workpreset.ini \
 	--preset=my_buildbot_linux \
 		install_destdir=$SW_BUILD_DIR/install \
-		installable_package=$SW_BUILD_DIR/$BRANCH.fc$FEDORA_VERSION.tar.gz 
+		installable_package=$SW_BUILD_DIR/$BRANCH.$TIMESTAMP.fc$FEDORA_VERSION.tar.gz 
 
 if [ ! -f install/usr/lib/liblldb.so.3 ] ; then
          if [ -f  install/usr/lib/liblldb.so.4.0.0 ] ; then
@@ -179,6 +179,6 @@ if [ ! -f install/usr/lib/liblldb.so.3 ] ; then
     fi
 
 pushd $SW_BUILD_DIR/install
-	tar -cvzf $SW_BUILD_DIR/$BRANCH.fc$FEDORA_VERSION.tar.gz .
+	tar -cvzf $SW_BUILD_DIR/$BRANCH.$TIMESTAMP.fc$FEDORA_VERSION.tar.gz .
 popd
 
