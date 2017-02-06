@@ -1,7 +1,10 @@
-BRANCH="swift-3.1-branch"
+#!/bin/sh -x
+#BRANCH = "swift-3.0.2-RELEASE" 
+TAG="swift-3.0.2-RELEASE"
+BRANCH="master"
 SUDO="sudo" 
 SW_BUILD_DIR=~/swift-source
-FEDORA_VERSION=25
+FEDORA_VERSION=24
 TIMESTAMP=`date +"%m-%d-%y.%H-%m"`
 
 if [ "/root" == $HOME ]; then 
@@ -17,6 +20,7 @@ $SUDO dnf install -y --best --allowerasing git \
     binutils \
     libtool \
     clang \
+    clang-devel \
     re2c \
     uuid-devel \
     libuuid-devel \
@@ -52,8 +56,45 @@ $SUDO dnf install -y --best --allowerasing git \
 
 
 
+
+
+
+
 mkdir -p $SW_BUILD_DIR/install
 pushd $SW_BUILD_DIR
+
+
+if [ -d $SW_BUILD_DIR/swiftutils ] ; then
+            pushd $SW_BUILD_DIR/swiftutils
+               git pull
+               git checkout -f master
+            popd
+         else
+            git clone http://github.com/apple/swift.git swiftutils
+            pushd $SW_BUILD_DIR/swiftutils
+               git checkout -f master
+            popd
+         fi
+
+#sigh, git supidity
+
+rm -rf swift-corelibs-foundation
+
+
+if [ "" == $TAG ] ; then
+if [ "" == $BRANCH ] ; then
+   swiftutils/utils/update-checkout --clone --scheme master --reset-to-remote
+else
+   swiftutils/utils/update-checkout --scheme $BRANCH --clone --reset-to-remote
+fi
+
+else
+   swiftutils/utils/update-checkout --scheme master --clone --tag $TAG --reset-to-remote 
+BRANCH=$TAG
+fi
+
+SW_BUILD_TEMP="buildbot_linux_${BRANCH}_fc${FEDORA_VERSION}"
+
  if [ -d $SW_BUILD_DIR/swift ] ; then
             pushd $SW_BUILD_DIR/swift 
 	       git pull
@@ -66,11 +107,7 @@ pushd $SW_BUILD_DIR
             popd
          fi
 
-if [ "" == $BRANCH ] ; then 
-   swift/utils/update-checkout --clone --reset-to-remote
-else
-   swift/utils/update-checkout --scheme $BRANCH --clone --reset-to-remote
-fi
+
 git clone https://github.com/ninja-build/ninja.git
 pushd ninja
 git checkout -f release
@@ -83,7 +120,7 @@ sed -i 's/#include <Block.h>/#include <closure\/Block.h>/g' swift-corelibs-found
 cat > ./mypreset.ini <<ZZZZ 
 [preset: my_buildbot_linux]
 mixin-preset=mixin_linux_installation
-build-subdir=buildbot_linux_fc$FEDORA_VERSION
+build-subdir=$SW_BUILD_TEMP
 lldb
 release
 test
@@ -104,7 +141,7 @@ reconfigure
 
 [preset: my_notest_buildbot_linux]
 mixin-preset=mixin_lightweight_assertions
-build-subdir=buildbot_linux_fc$FEDORA_VERSION
+build-subdir=$SW_BUILD_TEMP
 lldb
 release
 foundation
@@ -134,6 +171,10 @@ ZZZZ
 
 cat swift/utils/build-presets.ini ./mypreset.ini > ./workpreset.ini
 
+#cleanout the output directory
+
+rm -rf $SW_BUILD_DIR/install/*
+
 #Build the swift system
 
 swift/utils/build-script --jobs 4 \
@@ -145,20 +186,20 @@ swift/utils/build-script --jobs 4 \
 
 #Make lldb /lib and /lib64 the same to fool the tests. 
 
-$SUDO cp -r build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/* build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib
-$SUDO cp -r build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib/* build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64
+$SUDO cp -r build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/* build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib
+$SUDO cp -r build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/* build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64
 
-if [ ! -f build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib/liblldb.so.3 ] ; then
-         if [ -f  build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib/liblldb.so.4.0.0 ] ; then
-		$SUDO unlink build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib/liblldb.so.3
-		$SUDO cp build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib/liblldb.so.4.0.0 build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib/liblldb.so.3
+if [ ! -f build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.3 ] ; then
+         if [ -f  build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.4.0.0 ] ; then
+		$SUDO unlink build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.3
+		$SUDO cp build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.4.0.0 build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.3
          fi
     fi
 
 if [ ! -f build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/liblldb.so.3 ] ; then
          if [ -f  build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/liblldb.so.4.0.0 ] ; then
-                $SUDO unlink build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/liblldb.so.3
-                $SUDO cp build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/liblldb.so.4.0.0 build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/liblldb.so.3
+                $SUDO unlink build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/liblldb.so.3
+                $SUDO cp build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/liblldb.so.4.0.0 build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/liblldb.so.3
          fi
     fi
 

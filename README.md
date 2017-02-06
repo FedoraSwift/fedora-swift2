@@ -1,6 +1,17 @@
 # fedora-swift2
 This repository is for a set of build scripts for swift that are targeted initialy on fedora 25+ and swift 3.1+ 
 
+I have build running swift installs for the following versions 
+
+| Fedora   |      Branch    |  Tag |
+|----------|:-------------:|------:|
+| fc23|  swift-3.1-Branch |   |
+| fc24|     swift-3.1-Branch    |    |
+| fc25 |  swift-3.1-Branch  |      |
+| fc23|  master | swift-3.0.2-RELEASE  |
+| fc24|     master   |  swift-3.0.2-RELEASE  |
+| fc25 |  master  |   swift-3.0.2-RELEASE   |
+
 There are two scripts in this distribution, buildswift and runcontainer. Together 
 they form a containerized build environment for swift on fedora. 
 
