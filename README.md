@@ -62,17 +62,27 @@ $chmod +x buildswift
 $chmod +x runcontainer
 $./runcontainer
 ```
+2. Configure the script
+    At the top of the script you will find several "variables".
 
-2. When the container initializes and returns a command prompt do the following.
+    Set the $FEDORA_VERSION variable to the version you are building for
+
+    Set the $BRANCH to either "master" or "swift-3.1-branch", releases are tags on the 
+master branch, versions under development are often in thier own branch as per swift 3.1.
+
+    Set the $TAG variable to the name of the release you want, if you are using a tag, then set the $BRANCH to 'master'
+   , if you dont want to use a tag then set it to ''. 
+
+3. When the container initializes and returns a command prompt do the following.
 
 ```
 #cd ~/swift-source
 #./buildswift
 ```
-3. The container will update its packages, and install all the packages need to build the 
+4. The container will update its packages, and install all the packages need to build the 
 distribution, this is going to take a long long time, 10 hours is not unusual, so 
 dont get impatient.
-4. Eventually the process will complete, and the system will write an 
+5. Eventually the process will complete, and the system will write an 
 archive file called "swift-3.1-branch.fc25.tar.gz" to the folder on your
 main os, if there are no errors you can use.
 
