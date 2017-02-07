@@ -1,6 +1,8 @@
 # fedora-swift2
 This repository is for a set of build scripts for swift that are targeted initialy on fedora 25+ and swift 3.1+ 
 
+The scripts are targeted by default on fedora 25 and swift-3.1-branch
+
 I have build running swift installs for the following versions 
 
 | Fedora   |      Branch    |  Tag |
@@ -131,7 +133,9 @@ then it runs it again. This is still a work in progress, as im trying to elimina
 issues but I am still investigating.
 
 3. There is another issue with the Foundation libs, which requires a patch, between the two builds
-you can see this in https://github.com/apple/swift-corelibs-foundation/pull/843
+you can see this in https://github.com/apple/swift-corelibs-foundation/pull/843a
+
+4. The "import" function does not really work at all, it makes a bunch of assumptions about the version of gcc used and the layout of the /usr/include directory which are highly ubuntu specific. ubuntu 16.10 uses gcc 5.x whereas fedora uses gcc 6.x. Im looking a creating a new ld driver for the llbuild system that can handle the difference.  
 
 ### Todo
 
