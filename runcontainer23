@@ -1,4 +1,0 @@
-#!/bin/bash
-docker rm `docker ps -a | grep fedora23clean | cut -d' ' -f1` 
-
-docker run -it -v $PWD:/root/swift-source --name fedora23clean fedora:23 bash
