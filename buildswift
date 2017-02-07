@@ -1,18 +1,18 @@
-#!/bin/sh -x
-#BRANCH = "swift-3.0.2-RELEASE" 
-TAG="swift-3.0.2-RELEASE"
-BRANCH="master"
-SUDO="sudo" 
+#!/bin/sh 
+BRANCH="swift-3.1-branch"
+#TAG="swift-3.0.2-RELEASE"
+#BRANCH="master"
+SUDO="sudo"
 SW_BUILD_DIR=~/swift-source
-FEDORA_VERSION=24
+FEDORA_VERSION=25
 TIMESTAMP=`date +"%m-%d-%y.%H-%m"`
 
-if [ "/root" == $HOME ]; then 
-   SUDO=""
+if [ "/root" == $HOME ]; then
+  SUDO=""
 fi
 
 $sudo dnf update -y
-$SUDO dnf groupinstall -y --best --allowerasing "C Development Tools and Libraries" 
+$SUDO dnf groupinstall -y --best --allowerasing "C Development Tools and Libraries"
 $SUDO dnf install -y --best --allowerasing git \
     git-core \
     cmake \
@@ -40,72 +40,65 @@ $SUDO dnf install -y --best --allowerasing git \
     python-devel \
     python-pkgconfig
 
-# Map some utils 
+# Map some utils
 
-  if [ ! -f /usr/bin/gold ] ; then
-         if [ -f /usr/bin/ld.gold ] ; then
-            $SUDO ln -s /usr/bin/ld.gold /usr/bin/gold
-         fi
-    fi
+if [ ! -f /usr/bin/gold ] ; then
+  if [ -f /usr/bin/ld.gold ] ; then
+    $SUDO ln -s /usr/bin/ld.gold /usr/bin/gold
+  fi
+fi
 
- if [ ! -f /usr/bin/ninja ] ; then
-         if [ -f /usr/bin/ninja-build ] ; then
-            $SUDO ln -s /usr/bin/ninja-build /usr/bin/ninja
-         fi
-    fi
-
-
-
-
-
-
+if [ ! -f /usr/bin/ninja ] ; then
+  if [ -f /usr/bin/ninja-build ] ; then
+    $SUDO ln -s /usr/bin/ninja-build /usr/bin/ninja
+  fi
+fi
 
 mkdir -p $SW_BUILD_DIR/install
 pushd $SW_BUILD_DIR
 
 
 if [ -d $SW_BUILD_DIR/swiftutils ] ; then
-            pushd $SW_BUILD_DIR/swiftutils
-               git pull
-               git checkout -f master
-            popd
-         else
-            git clone http://github.com/apple/swift.git swiftutils
-            pushd $SW_BUILD_DIR/swiftutils
-               git checkout -f master
-            popd
-         fi
+  pushd $SW_BUILD_DIR/swiftutils
+  git pull
+  git checkout -f master
+  popd
+else
+  git clone http://github.com/apple/swift.git swiftutils
+  pushd $SW_BUILD_DIR/swiftutils
+  git checkout -f master
+  popd
+fi
 
 #sigh, git supidity
 
 rm -rf swift-corelibs-foundation
 
 
-if [ "" == $TAG ] ; then
-if [ "" == $BRANCH ] ; then
-   swiftutils/utils/update-checkout --clone --scheme master --reset-to-remote
+if [ -z "$TAG" ] ; then
+  if [ -z "$BRANCH" ] ; then
+    swiftutils/utils/update-checkout --clone --scheme master --reset-to-remote
+  else
+    swiftutils/utils/update-checkout --scheme $BRANCH --clone --reset-to-remote
+  fi
 else
-   swiftutils/utils/update-checkout --scheme $BRANCH --clone --reset-to-remote
-fi
-
-else
-   swiftutils/utils/update-checkout --scheme master --clone --tag $TAG --reset-to-remote 
-BRANCH=$TAG
+  swiftutils/utils/update-checkout --scheme master --clone --tag $TAG --reset-to-remote
+  BRANCH=$TAG
 fi
 
 SW_BUILD_TEMP="buildbot_linux_${BRANCH}_fc${FEDORA_VERSION}"
 
- if [ -d $SW_BUILD_DIR/swift ] ; then
-            pushd $SW_BUILD_DIR/swift 
-	       git pull
-	       git checkout -f $BRANCH
-	    popd
-         else
-	    git clone http://github.com/apple/swift.git
-	    pushd $SW_BUILD_DIR/swift
-               git checkout -f $BRANCH
-            popd
-         fi
+if [ -d $SW_BUILD_DIR/swift ] ; then
+  pushd $SW_BUILD_DIR/swift
+  git pull
+  git checkout -f $BRANCH
+  popd
+else
+  git clone http://github.com/apple/swift.git
+  pushd $SW_BUILD_DIR/swift
+  git checkout -f $BRANCH
+  popd
+fi
 
 
 git clone https://github.com/ninja-build/ninja.git
@@ -117,7 +110,7 @@ sed -i '/#include <Block.h>/d' swift-corelibs-foundation/CoreFoundation/Base.sub
 sed -i 's/#include <Block.h>/#include <closure\/Block.h>/g' swift-corelibs-foundation/CoreFoundation/Collections.subproj/CFBasicHash.c
 sed -i 's/#include <Block.h>/#include <closure\/Block.h>/g' swift-corelibs-foundation/CoreFoundation/RunLoop.subproj/CFRunLoop.c
 
-cat > ./mypreset.ini <<ZZZZ 
+cat > ./mypreset.ini <<ZZZZ
 [preset: my_buildbot_linux]
 mixin-preset=mixin_linux_installation
 build-subdir=$SW_BUILD_TEMP
@@ -133,7 +126,7 @@ lit-args=-v
 dash-dash
 skip-test-lldb
 skip-test-linux
-skip-test-swiftpm  
+skip-test-swiftpm
 
 install-foundation
 install-libdispatch
@@ -184,24 +177,24 @@ swift/utils/build-script --jobs 4 \
                 installable_package=$SW_BUILD_DIR/$BRANCH.$TIMESTAMP.fc$FEDORA_VERSION.tar.gz
 
 
-#Make lldb /lib and /lib64 the same to fool the tests. 
+#Make lldb /lib and /lib64 the same to fool the tests.
 
 $SUDO cp -r build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/* build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib
 $SUDO cp -r build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/* build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64
 
 if [ ! -f build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.3 ] ; then
-         if [ -f  build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.4.0.0 ] ; then
-		$SUDO unlink build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.3
-		$SUDO cp build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.4.0.0 build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.3
-         fi
-    fi
+  if [ -f  build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.4.0.0 ] ; then
+    $SUDO unlink build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.3
+    $SUDO cp build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.4.0.0 build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.3
+  fi
+fi
 
 if [ ! -f build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/liblldb.so.3 ] ; then
-         if [ -f  build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/liblldb.so.4.0.0 ] ; then
-                $SUDO unlink build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/liblldb.so.3
-                $SUDO cp build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/liblldb.so.4.0.0 build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/liblldb.so.3
-         fi
-    fi
+  if [ -f  build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/liblldb.so.4.0.0 ] ; then
+    $SUDO unlink build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/liblldb.so.3
+    $SUDO cp build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/liblldb.so.4.0.0 build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/liblldb.so.3
+  fi
+fi
 
 
 #Run the build a second time to run all the tests
@@ -210,16 +203,16 @@ swift/utils/build-script --jobs 4 \
         --preset-file=./workpreset.ini \
 	--preset=my_buildbot_linux \
 		install_destdir=$SW_BUILD_DIR/install \
-		installable_package=$SW_BUILD_DIR/$BRANCH.$TIMESTAMP.fc$FEDORA_VERSION.tar.gz 
+		installable_package=$SW_BUILD_DIR/$BRANCH.$TIMESTAMP.fc$FEDORA_VERSION.tar.gz
 
 if [ ! -f install/usr/lib/liblldb.so.3 ] ; then
-         if [ -f  install/usr/lib/liblldb.so.4.0.0 ] ; then
-                $SUDO unlink install/usr/lib/liblldb.so.3
-                $SUDO cp install/usr/lib/liblldb.so.4.0.0 install/usr/lib/liblldb.so.3
-         fi
-    fi
+  if [ -f  install/usr/lib/liblldb.so.4.0.0 ] ; then
+    $SUDO unlink install/usr/lib/liblldb.so.3
+    $SUDO cp install/usr/lib/liblldb.so.4.0.0 install/usr/lib/liblldb.so.3
+  fi
+fi
 
 pushd $SW_BUILD_DIR/install
-	tar -cvzf $SW_BUILD_DIR/$BRANCH.$TIMESTAMP.fc$FEDORA_VERSION.tar.gz .
+tar -cvzf $SW_BUILD_DIR/$BRANCH.$TIMESTAMP.fc$FEDORA_VERSION.tar.gz .
 popd
 
