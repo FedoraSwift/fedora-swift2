@@ -77,13 +77,13 @@ fi
 
 if [ -d $SW_BUILD_DIR/swift ] ; then
   pushd $SW_BUILD_DIR/swift
-	git reset --hard @{upstream}
+	git reset --hard 
   popd
 fi
 
 if [ -d $SW_BUILD_DIR/swift-corelibs-foundation ] ; then
   pushd $SW_BUILD_DIR/swift-corelibs-foundation
-        git reset --hard @{upstream}
+        git reset --hard 
   popd
 fi
 
@@ -236,6 +236,14 @@ if [ ! -f install/usr/lib/liblldb.so.3 ] ; then
     $SUDO cp install/usr/lib/liblldb.so.4.0.0 install/usr/lib/liblldb.so.3
   fi
 fi
+
+if [ ! -f install/usr/lib/liblldb.so.3 ] ; then
+  if [ -f  install/usr/lib/liblldb.so.3.9.0 ] ; then
+    $SUDO unlink install/usr/lib/liblldb.so.3
+    $SUDO cp install/usr/lib/liblldb.so.3.9.0 install/usr/lib/liblldb.so.3
+  fi
+fi
+
 
 pushd $SW_BUILD_DIR/install
 tar -cvzf $SW_BUILD_DIR/$BRANCH.$TIMESTAMP.fc$FEDORA_VERSION.tar.gz .
