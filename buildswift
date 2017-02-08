@@ -1,7 +1,8 @@
 #!/bin/sh 
-BRANCH="swift-3.1-branch"
-#TAG="swift-3.0.2-RELEASE"
-#BRANCH="master"
+#BRANCH="swift-3.1-branch"
+#TAG=''
+TAG="swift-3.0.2-RELEASE"
+BRANCH="master"
 SUDO="sudo"
 SW_BUILD_DIR=~/swift-source
 FEDORA_VERSION=25
@@ -72,7 +73,20 @@ fi
 
 #sigh, git supidity
 
-rm -rf swift-corelibs-foundation
+#rm -rf swift-corelibs-foundation
+
+if [ -d $SW_BUILD_DIR/swift ] ; then
+  pushd $SW_BUILD_DIR/swift
+	git reset --hard @{upstream}
+  popd
+fi
+
+if [ -d $SW_BUILD_DIR/swift-corelibs-foundation ] ; then
+  pushd $SW_BUILD_DIR/swift-corelibs-foundation
+        git reset --hard @{upstream}
+  popd
+fi
+
 
 
 if [ -z "$TAG" ] ; then
@@ -109,6 +123,7 @@ popd
 sed -i '/#include <Block.h>/d' swift-corelibs-foundation/CoreFoundation/Base.subproj/CFBase.h
 sed -i 's/#include <Block.h>/#include <closure\/Block.h>/g' swift-corelibs-foundation/CoreFoundation/Collections.subproj/CFBasicHash.c
 sed -i 's/#include <Block.h>/#include <closure\/Block.h>/g' swift-corelibs-foundation/CoreFoundation/RunLoop.subproj/CFRunLoop.c
+sed -i 's/CachedVFile = {};/CachedVFile = {nullptr, nullptr};/g' swift/lib/Basic/SourceLoc.cpp
 
 cat > ./mypreset.ini <<ZZZZ
 [preset: my_buildbot_linux]
@@ -187,6 +202,11 @@ if [ ! -f build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.3 ] ; then
     $SUDO unlink build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.3
     $SUDO cp build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.4.0.0 build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.3
   fi
+ if [ -f  build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.3.9.0 ] ; then
+    $SUDO unlink build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.3
+    $SUDO cp build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.3.9.0 build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib/liblldb.so.3
+  fi
+
 fi
 
 if [ ! -f build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/liblldb.so.3 ] ; then
@@ -194,6 +214,11 @@ if [ ! -f build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/liblldb
     $SUDO unlink build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/liblldb.so.3
     $SUDO cp build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/liblldb.so.4.0.0 build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/liblldb.so.3
   fi
+ if [ -f  build/buildbot_linux_fc$FEDORA_VERSION/lldb-linux-x86_64/lib64/liblldb.so.3.9.0 ] ; then
+    $SUDO unlink build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/liblldb.so.3
+    $SUDO cp build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/liblldb.so.3.9.0 build/$SW_BUILD_TEMP/lldb-linux-x86_64/lib64/liblldb.so.3
+  fi
+
 fi
 
 

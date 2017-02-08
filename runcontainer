@@ -1,4 +1,4 @@
 #!/bin/bash
 docker rm `docker ps -a | grep fedora25clean | cut -d' ' -f1` 
 
-docker run -it -v $PWD:/root/swift-source --name fedora25clean fedora bash
+docker run -it --privileged=true -v $PWD:/root/swift-source --name fedora25clean fedora bash
